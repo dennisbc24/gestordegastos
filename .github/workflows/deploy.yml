@@ -19,6 +19,11 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
+            if [ ! -d /home/ubuntu/proyects/gestordegastos/.git ]; then
+              echo "Clonando por primera vez..."
+              mkdir -p /home/ubuntu/proyects
+              git clone https://github.com/dennisbc24/gestordegastos.git /home/ubuntu/proyects/gestordegastos
+            fi
             cd /home/ubuntu/proyects/gestordegastos
             git pull origin master
             npm ci
