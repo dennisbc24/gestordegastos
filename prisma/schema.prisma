@@ -1,0 +1,64 @@
+// Prisma schema para Gestor de Gastos
+// DB: PostgreSQL en EC2 (5432 prod / 5433 local via SSM)
+// Conexión: ver .env -> DATABASE_URL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TransactionType {
+  income
+  expense
+}
+
+enum Currency {
+  PEN
+  USD
+  EUR
+}
+
+model Category {
+  id           String          @id @default(cuid())
+  name         String
+  icon         String          @default("📦")
+  color        String          @default("#94A3B8")
+  type         TransactionType
+  isDefault    Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  transactions Transaction[]
+
+  @@unique([name, type])
+  @@map("categories")
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  type        TransactionType
+  amount      Decimal         @db.Decimal(12, 2)
+  description String
+  note        String?
+  date        DateTime        @db.Date
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([date])
+  @@index([type])
+  @@index([categoryId])
+  @@map("transactions")
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  categoryId String   @unique
+  limit      Decimal  @db.Decimal(12, 2)
+  updatedAt  DateTime @updatedAt
+
+  @@map("budgets")
+}

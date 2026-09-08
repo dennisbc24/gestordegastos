@@ -3,24 +3,35 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3087",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start --port 3087",
+    "lint": "eslint",
+    "db:generate": "node scripts/with-db-url.mjs prisma generate",
+    "db:migrate": "node scripts/with-db-url.mjs prisma migrate dev",
+    "db:seed": "node scripts/with-db-url.mjs tsx prisma/seed.ts",
+    "db:studio": "node scripts/with-db-url.mjs prisma studio",
+    "db:push": "node scripts/with-db-url.mjs prisma db push"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "next": "16.3.4",
+    "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "prisma": "^7.10.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

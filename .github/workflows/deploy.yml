@@ -1,0 +1,26 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ master, main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/proyects/gestordegastos
+            git pull origin master
+            npm install
+            npx prisma generate
+            npm run build
+            pm2 restart gestordegastos || pm2 start npm --name "gestordegastos" -- start --port 3087
