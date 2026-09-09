@@ -19,6 +19,14 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            # fallback: agrega cualquier versión de node de nvm al PATH
+            for d in $HOME/.nvm/versions/node/*/bin; do [ -d "$d" ] && export PATH="$d:$PATH"; done
+            export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:$PATH"
+            echo "node: $(which node || echo 'not found') $(node -v || echo 'no version')"
+            echo "npm: $(which npm || echo 'not found') $(npm -v || echo 'no version')"
+            echo "pm2: $(which pm2 || echo 'not found')"
             if [ ! -d /home/ubuntu/proyects/gestordegastos/.git ]; then
               echo "Clonando por primera vez..."
               mkdir -p /home/ubuntu/proyects
