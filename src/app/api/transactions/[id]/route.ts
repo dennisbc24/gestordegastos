@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUserIdFromRequest } from "@/lib/auth-helpers";
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { id } = await params;
-  const tx = await prisma.transaction.findUnique({ where: { id }, include: { category: true } });
+  const tx = await prisma.transaction.findFirst({ where: { id, userId }, include: { category: true } });
   if (!tx) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
   return NextResponse.json({
     id: tx.id,
@@ -18,8 +21,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { id } = await params;
   try {
+    const existing = await prisma.transaction.findFirst({ where: { id, userId } });
+    if (!existing) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
     const body = await req.json();
     const { type, amount, categoryId, description, date, note } = body;
     const data: Record<string, unknown> = {};
@@ -66,9 +73,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { id } = await params;
   try {
+    const existing = await prisma.transaction.findFirst({ where: { id, userId } });
+    if (!existing) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
     await prisma.transaction.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUserIdFromRequest } from "@/lib/auth-helpers";
 
 export async function GET(req: NextRequest) {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   try {
     const { searchParams } = new URL(req.url);
-    const month = searchParams.get("month"); // YYYY-MM
+    const month = searchParams.get("month");
     const type = searchParams.get("type");
     const categoryId = searchParams.get("categoryId");
     const search = searchParams.get("search");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId };
     if (type && ["income", "expense"].includes(type)) (where as Record<string, string>).type = type;
     if (categoryId) (where as Record<string, string>).categoryId = categoryId;
     if (month) {
@@ -23,6 +26,11 @@ export async function GET(req: NextRequest) {
         { description: { contains: search, mode: "insensitive" } },
         { note: { contains: search, mode: "insensitive" } },
       ];
+      // mantener userId junto con OR usando AND
+      const or = (where as Record<string, unknown>).OR;
+      delete (where as Record<string, unknown>).OR;
+      (where as Record<string, unknown>).AND = [{ userId }, { OR: or }];
+      delete (where as Record<string, unknown>).userId;
     }
 
     const txs = await prisma.transaction.findMany({
@@ -50,6 +58,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   try {
     const body = await req.json();
     const { type, amount, categoryId, description, date, note } = body;
@@ -61,7 +71,6 @@ export async function POST(req: NextRequest) {
     const parsedDate = date ? new Date(date) : new Date();
     if (isNaN(parsedDate.getTime())) return NextResponse.json({ error: "date inválida" }, { status: 400 });
 
-    // validar categoría existe y coincide tipo
     const cat = await prisma.category.findUnique({ where: { id: categoryId } });
     if (!cat) return NextResponse.json({ error: "Categoría no encontrada" }, { status: 404 });
     if (cat.type !== type) return NextResponse.json({ error: `Categoría ${cat.name} es de tipo ${cat.type}` }, { status: 400 });
@@ -74,6 +83,7 @@ export async function POST(req: NextRequest) {
         description: description.trim(),
         note: note?.trim() || null,
         date: parsedDate,
+        userId,
       },
       include: { category: true },
     });

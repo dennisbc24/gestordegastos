@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 // ───────────────────────────────────────────────────────── Types
 type TxType = "expense" | "income";
@@ -106,10 +107,12 @@ function MiniBars({ months, currency }: { months: { ym: string; income: number; 
 
 // ───────────────────────────────────────────────────────── Main
 export default function Page() {
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgets, setBudgets] = useState<Budget>({});
   const [currency, setCurrency] = useState<Currency>("PEN");
+  const [user, setUser] = useState<{ id: string; email: string; name: string | null } | null>(null);
   const [activeTab, setActiveTab] = useState<"inicio" | "transacciones" | "estadisticas" | "presupuesto">("inicio");
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [search, setSearch] = useState("");
@@ -135,8 +138,14 @@ export default function Page() {
     try {
       setLoading(true);
       setError(null);
-      const [catRes, txRes, budRes] = await Promise.all([fetch("/api/categories"), fetch("/api/transactions"), fetch("/api/budgets")]);
+      const [meRes, catRes, txRes, budRes] = await Promise.all([fetch("/api/auth/me"), fetch("/api/categories"), fetch("/api/transactions"), fetch("/api/budgets")]);
+      if (meRes.status === 401) { router.push("/login"); return; }
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        setUser(meData.user);
+      }
       if (!catRes.ok) throw new Error("Error categorías");
+      if (txRes.status === 401) { router.push("/login"); return; }
       if (!txRes.ok) throw new Error("Error transacciones");
       const cats: Category[] = await catRes.json();
       const txs: Transaction[] = await txRes.json();
@@ -295,7 +304,7 @@ export default function Page() {
     }
   }
 
-  async function updateBudget(categoryId: string, limit: number) {
+   async function updateBudget(categoryId: string, limit: number) {
     setBudgets((prev) => ({ ...prev, [categoryId]: limit }));
     try {
       const res = await fetch("/api/budgets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ categoryId, limit }) });
@@ -303,6 +312,11 @@ export default function Page() {
     } catch (e) {
       console.error(e);
     }
+  }
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
   }
 
   const catForForm = categories.filter((c) => c.type === formType);
@@ -353,7 +367,19 @@ export default function Page() {
               <option value="USD">$ USD</option>
               <option value="EUR">€ EUR</option>
             </select>
-            <div className="hidden sm:flex w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-white items-center justify-center text-xs font-bold">PG</div>
+            {user ? (
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="text-right leading-none">
+                  <div className="text-xs font-bold">{user.name || user.email.split("@")[0]}</div>
+                  <div className="text-[11px] text-slate-500">{user.email}</div>
+                </div>
+                <button onClick={handleLogout} className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs" title="Cerrar sesión">
+                  ↪
+                </button>
+              </div>
+            ) : (
+              <div className="hidden sm:flex w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-white items-center justify-center text-xs font-bold">PG</div>
+            )}
           </div>
         </div>
       </header>

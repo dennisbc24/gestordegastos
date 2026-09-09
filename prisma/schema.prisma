@@ -21,6 +21,20 @@ enum Currency {
   EUR
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@map("users")
+}
+
 model Category {
   id           String          @id @default(cuid())
   name         String
@@ -48,17 +62,25 @@ model Transaction {
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([date])
   @@index([type])
   @@index([categoryId])
+  @@index([userId])
   @@map("transactions")
 }
 
 model Budget {
   id         String   @id @default(cuid())
-  categoryId String   @unique
+  categoryId String
   limit      Decimal  @db.Decimal(12, 2)
   updatedAt  DateTime @updatedAt
 
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
   @@map("budgets")
 }
