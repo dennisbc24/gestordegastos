@@ -32,13 +32,13 @@ jobs:
 
       - name: Create deploy archive
         run: |
-          tar -czf /tmp/gestordegastos.tar.gz --ignore-failed-read \
+          tar -czf gestordegastos.tar.gz --ignore-failed-read \
             --exclude='.git' --exclude='node_modules' --exclude='.next/cache' \
             .next prisma package.json package-lock.json public src next.config.ts prisma.config.ts postcss.config.mjs tsconfig.json || \
-          tar -czf /tmp/gestordegastos.tar.gz --ignore-failed-read \
+          tar -czf gestordegastos.tar.gz --ignore-failed-read \
             --exclude='.git' --exclude='node_modules' \
             .next prisma package.json package-lock.json public src next.config.ts prisma.config.ts || true
-          ls -lh /tmp/gestordegastos.tar.gz
+          ls -lh gestordegastos.tar.gz
 
       - name: Upload to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -46,7 +46,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "/tmp/gestordegastos.tar.gz"
+          source: "gestordegastos.tar.gz"
           target: "/tmp/"
           strip_components: 0
 
@@ -74,8 +74,17 @@ jobs:
             git pull origin master
 
             # Descomprimir lo compilado en GitHub (sobrescribe .next y prisma)
-            tar -xzf /tmp/gestordegastos.tar.gz -C /home/ubuntu/proyects/gestordegastos
-            rm /tmp/gestordegastos.tar.gz
+            # el scp lo deja en /tmp/gestordegastos.tar.gz o /tmp/./gestordegastos.tar.gz según versión
+            if [ -f /tmp/gestordegastos.tar.gz ]; then
+              tar -xzf /tmp/gestordegastos.tar.gz -C /home/ubuntu/proyects/gestordegastos
+              rm /tmp/gestordegastos.tar.gz
+            elif [ -f /tmp/./gestordegastos.tar.gz ]; then
+              tar -xzf /tmp/./gestordegastos.tar.gz -C /home/ubuntu/proyects/gestordegastos
+              rm /tmp/./gestordegastos.tar.gz
+            else
+              echo "Buscando tar..."
+              find /tmp -name "gestordegastos.tar.gz" -exec tar -xzf {} -C /home/ubuntu/proyects/gestordegastos \; -exec rm {} \;
+            fi
 
             # Solo instala deps de producción + prisma (sin compilar)
             npm ci --omit=dev --prefer-offline --no-audit || npm ci --prefer-offline --no-audit
