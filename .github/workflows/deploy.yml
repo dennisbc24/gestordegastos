@@ -42,7 +42,10 @@ jobs:
             fi
             cd /home/ubuntu/proyects/gestordegastos
             git pull origin master
-            npm ci --prefer-offline --no-audit
+            rm -rf node_modules/.cache 2>/dev/null || true
+            rm -rf .next 2>/dev/null || true
+            # si el node_modules quedó corrupto por timeout anterior, límpialo
+            npm ci --prefer-offline --no-audit || (rm -rf node_modules && npm ci --prefer-offline --no-audit)
             npx prisma generate
             npx prisma migrate deploy
             npm run build
