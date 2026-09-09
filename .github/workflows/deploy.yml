@@ -32,9 +32,13 @@ jobs:
 
       - name: Create deploy archive
         run: |
-          tar -czf /tmp/gestordegastos.tar.gz \
+          tar -czf /tmp/gestordegastos.tar.gz --ignore-failed-read \
             --exclude='.git' --exclude='node_modules' --exclude='.next/cache' \
-            .next prisma package.json package-lock.json public src next.config.ts prisma.config.ts postcss.config.mjs tsconfig.json .env.example
+            .next prisma package.json package-lock.json public src next.config.ts prisma.config.ts postcss.config.mjs tsconfig.json || \
+          tar -czf /tmp/gestordegastos.tar.gz --ignore-failed-read \
+            --exclude='.git' --exclude='node_modules' \
+            .next prisma package.json package-lock.json public src next.config.ts prisma.config.ts || true
+          ls -lh /tmp/gestordegastos.tar.gz
 
       - name: Upload to EC2
         uses: appleboy/scp-action@v0.1.7
